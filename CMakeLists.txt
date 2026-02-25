@@ -168,10 +168,10 @@ endif()
 add_executable(powertop ${POWERTOP_COMMON_SOURCES})
 
 target_include_directories(powertop PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/platform
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 # -----------------------------------------------------------------------

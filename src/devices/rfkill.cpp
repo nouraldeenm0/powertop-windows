@@ -26,11 +26,8 @@
 #include <fstream>
 
 #include <stdio.h>
-#include <sys/types.h>
-#include <libgen.h>
-#include <unistd.h>
 #include <limits.h>
-
+#include <string.h>
 
 using namespace std;
 
@@ -38,7 +35,9 @@ using namespace std;
 #include "rfkill.h"
 #include "../parameters/parameters.h"
 
-#include <string.h>
+#ifndef _WIN32
+#include <sys/types.h>
+#include <libgen.h>
 #include <unistd.h>
 
 rfkill::rfkill(char *_name, char *path): device()
@@ -175,3 +174,7 @@ double rfkill::power_usage(struct result_bundle *result, struct parameter_bundle
 
 	return power;
 }
+
+#else /* _WIN32 */
+void create_all_rfkills(void) { /* Not supported on Windows */ }
+#endif /* !_WIN32 */

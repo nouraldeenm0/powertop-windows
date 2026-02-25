@@ -25,8 +25,8 @@
 #ifndef __INCLUDE_GUARD_EXTECH_H
 #define __INCLUDE_GUARD_EXTECH_H
 
-#include <pthread.h>
 #include "measurement.h"
+#include "../platform/platform.h"
 
 class extech_power_meter: public power_meter {
 	char dev_name[256];
@@ -37,7 +37,7 @@ class extech_power_meter: public power_meter {
 	double sum;
 	int samples;
 	int end_thread;
-	pthread_t thread;
+	pt_thread_t thread;
 public:
 	extech_power_meter(const char *_dev_name);
 	virtual void start_measurement(void);

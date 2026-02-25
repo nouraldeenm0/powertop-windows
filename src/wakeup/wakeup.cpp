@@ -24,7 +24,9 @@
  */
 
 #include <string.h>
+#ifndef _WIN32
 #include <ncurses.h>
+#endif
 #include "wakeup.h"
 #include <vector>
 #include "../lib.h"

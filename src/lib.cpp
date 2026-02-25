@@ -40,9 +40,14 @@
 #include "platform/platform.h"
 
 #ifndef HAVE_NO_PCI
+#  ifndef _WIN32
 extern "C" {
-#include <pci/pci.h>
+#  include <pci/pci.h>
 }
+#  else
+/* PCI support not available on Windows */
+#    define HAVE_NO_PCI 1
+#  endif
 #endif
 
 #include <stdio.h>
@@ -62,7 +67,9 @@ extern "C" {
 
 #include <limits>
 #include <math.h>
-#include <ncurses.h>
+#ifndef _WIN32
+#  include <ncurses.h>
+#endif
 
 static int kallsyms_read = 0;
 

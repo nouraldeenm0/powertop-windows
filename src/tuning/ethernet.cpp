@@ -25,25 +25,26 @@
 
 #include "tuning.h"
 #include "tunable.h"
-#include <sys/types.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <utility>
 #include <iostream>
 #include <fstream>
-#include <sys/socket.h>
 #include <errno.h>
+
+#include "../lib.h"
+#include "ethernet.h"
+
+#ifndef _WIN32
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/socket.h>
 #include <linux/types.h>
 #include <net/if.h>
 #include <linux/sockios.h>
 #include <sys/ioctl.h>
-
 #include <linux/ethtool.h>
-
-#include "../lib.h"
-#include "ethernet.h"
 
 extern void create_all_nics(callback fn);
 
@@ -155,3 +156,7 @@ void add_ethernet_tunable(void)
 {
 	create_all_nics(&ethtunable_callback);
 }
+
+#else /* _WIN32 */
+void add_ethernet_tunable(void) { /* Not supported on Windows */ }
+#endif /* !_WIN32 */

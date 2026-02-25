@@ -27,23 +27,25 @@
 #include <fstream>
 
 #include <errno.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <string.h>
+
+#ifndef _WIN32
+#include "perf_event.h"
+#include <unistd.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-
 #include <fcntl.h>
+#endif
 
-#include "perf_event.h"
 #include "perf.h"
 #include "../lib.h"
 #include "../display.h"
 
+#ifndef _WIN32
 struct tep_handle *perf_event::tep;
 
 static inline int sys_perf_event_open(struct perf_event_attr *attr,
@@ -263,3 +265,4 @@ void perf_event::clear(void)
 		close(perf_fd);
 	perf_fd = -1;
 }
+#endif /* !_WIN32 */

@@ -37,8 +37,9 @@
 #  include <process.h>     /* getpid */
 
 /* Map POSIX names to Windows equivalents */
-#  define sleep(s)         Sleep((s) * 1000)
-#  define usleep(us)       Sleep((us) / 1000)
+#  define pt_sleep(s)      Sleep((s) * 1000)
+#  define sleep(s)         (Sleep((s) * 1000), 0)
+#  define usleep(us)       (Sleep((unsigned)((us) / 1000) + 1), 0)
 #  define access(p,m)      _access((p),(m))
 #  define mkdir(p,m)       _mkdir(p)
 #  define PATH_MAX         MAX_PATH

@@ -23,21 +23,25 @@
  *	Arjan van de Ven <arjan@linux.intel.com>
  */
 #include <iostream>
-#include <malloc.h>
 #include <algorithm>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
+
+#include "perf_bundle.h"
+#include "perf.h"
+
+#include "../cpu/cpu.h"
+
+#ifndef _WIN32
+#include <malloc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdio.h>
-
-#include "perf_bundle.h"
+#ifndef _WIN32
 #include "perf_event.h"
-#include "perf.h"
-
-#include "../cpu/cpu.h"
+#endif
 
 #if defined(__GXX_EXPERIMENTAL_CXX0X__) || (__cplusplus >= 201103L)
 # define USE_DECLTYPE
@@ -281,3 +285,13 @@ void perf_bundle::handle_trace_point(void *trace, int cpu, uint64_t time)
 {
 	printf("UH OH... abstract handle_trace_point called\n");
 }
+#else /* _WIN32 */
+/* Stub implementations for perf_bundle on Windows */
+void perf_bundle::release(void) {}
+void perf_bundle::start(void) {}
+void perf_bundle::stop(void) {}
+void perf_bundle::clear(void) {}
+void perf_bundle::process(void) {}
+bool perf_bundle::add_event(const char *, const char *) { return false; }
+void perf_bundle::handle_trace_point(void *, int, uint64_t) {}
+#endif /* !_WIN32 */

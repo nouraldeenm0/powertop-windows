@@ -27,7 +27,9 @@
 #include <vector>
 #include <string.h>
 #include <stdlib.h>
+#ifndef _WIN32
 #include <ncurses.h>
+#endif
 #include <unistd.h>
 #include "cpu.h"
 #include "cpudevice.h"
@@ -50,12 +52,13 @@ vector<class abstract_cpu *> all_cpus;
 static	class perf_bundle * perf_events;
 
 
-
+#ifndef _WIN32
 class perf_power_bundle: public perf_bundle
 {
 	virtual void handle_trace_point(void *trace, int cpu, uint64_t time);
 
 };
+#endif /* !_WIN32 */
 
 
 static class abstract_cpu * new_package(int package, int cpu, char * vendor, int family, int model)
@@ -327,6 +330,7 @@ void enumerate_cpus(void)
 	if (access("/sys/class/drm/card0/power/rc6_residency_ms", R_OK) == 0)
 		handle_i965_gpu();
 
+#ifndef _WIN32
 	perf_events = new perf_power_bundle();
 
 	if (!perf_events->add_event("power","cpu_idle")){
@@ -335,19 +339,24 @@ void enumerate_cpus(void)
 	}
 	if (!perf_events->add_event("power","cpu_frequency"))
 		perf_events->add_event("power","power_frequency");
+#endif
 
 }
 
 void start_cpu_measurement(void)
 {
+#ifndef _WIN32
 	perf_events->start();
+#endif
 	system_level.measurement_start();
 }
 
 void end_cpu_measurement(void)
 {
 	system_level.measurement_end();
+#ifndef _WIN32
 	perf_events->stop();
+#endif
 }
 
 static void expand_string(char *string, unsigned int newlen)
@@ -962,6 +971,7 @@ void w_display_cpu_cstates(void)
 	impl_w_display_cpu_states(CSTATE);
 }
 
+#ifndef _WIN32
 struct power_entry {
 #ifndef __i386__
 	int dummy;
@@ -1040,13 +1050,16 @@ void perf_power_bundle::handle_trace_point(void *trace, int cpunr, uint64_t time
 			system_level.children[i]->validate();
 #endif
 }
+#endif /* !_WIN32 */
 
 void process_cpu_data(void)
 {
 	unsigned int i;
 	system_level.reset_pstate_data();
 
+#ifndef _WIN32
 	perf_events->process();
+#endif
 
 	for (i = 0; i < system_level.children.size(); i++)
 		if (system_level.children[i])
@@ -1058,14 +1071,18 @@ void end_cpu_data(void)
 {
 	system_level.reset_pstate_data();
 
+#ifndef _WIN32
 	perf_events->clear();
+#endif
 }
 
 void clear_cpu_data(void)
 {
+#ifndef _WIN32
 	if (perf_events)
 		perf_events->release();
 	delete perf_events;
+#endif
 }
 
 

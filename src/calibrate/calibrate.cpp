@@ -29,17 +29,23 @@
 #include "calibrate.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <math.h>
-#include <sys/types.h>
 #include <errno.h>
 #include <limits.h>
 
+#ifndef _WIN32
+#  include <unistd.h>
+#  include <pthread.h>
+#  include <sys/types.h>
+#endif
+
+#include "../platform/platform.h"
 #include "../parameters/parameters.h"
+#ifndef _WIN32
 extern "C" {
-#include "../tuning/iw.h"
+#  include "../tuning/iw.h"
 }
+#endif
 
 #include <map>
 #include <vector>
@@ -83,7 +89,9 @@ static void restore_all_sysfs(void)
 	for (it = saved_sysfs.begin(); it != saved_sysfs.end(); it++)
 		write_sysfs(it->first, it->second);
 
+#ifndef _WIN32
 	set_wifi_power_saving("wlan0", wireless_PS);
+#endif
 }
 
 static void find_all_usb_callback(const char *d_name)
@@ -220,13 +228,18 @@ static void *burn_cpu_wakeups(void *dummy)
 	while (!stop_measurement) {
 		tm.tv_sec = 0;
 		tm.tv_nsec = (unsigned long)dummy;
+#ifndef _WIN32
 		nanosleep(&tm, NULL);
+#else
+		Sleep((DWORD)((unsigned long)dummy / 1000000));
+#endif
 	}
 	return NULL;
 }
 
 static void *burn_disk(void *dummy)
 {
+#ifndef _WIN32
 	int fd;
 	char buffer[64*1024];
 	char filename[256];
@@ -246,6 +259,9 @@ static void *burn_disk(void *dummy)
 		fdatasync(fd);
 	}
 	unlink(filename);
+#else
+	(void)dummy;
+#endif
 	return NULL;
 }
 
@@ -253,13 +269,13 @@ static void *burn_disk(void *dummy)
 static void cpu_calibration(int threads)
 {
 	int i;
-	pthread_t thr;
+	pt_thread_t thr = 0;
 
 	printf(_("Calibrating: CPU usage on %i threads\n"), threads);
 
 	stop_measurement = 0;
 	for (i = 0; i < threads; i++)
-		pthread_create(&thr, NULL, burn_cpu, NULL);
+		pt_thread_create(&thr, burn_cpu, NULL);
 
 	one_measurement(15, 15, NULL);
 	stop_measurement = 1;
@@ -268,13 +284,13 @@ static void cpu_calibration(int threads)
 
 static void wakeup_calibration(unsigned long interval)
 {
-	pthread_t thr;
+	pt_thread_t thr = 0;
 
 	printf(_("Calibrating: CPU wakeup power consumption\n"));
 
 	stop_measurement = 0;
 
-	pthread_create(&thr, NULL, burn_cpu_wakeups, (void *)interval);
+	pt_thread_create(&thr, burn_cpu_wakeups, (void *)interval);
 
 	one_measurement(15, 15, NULL);
 	stop_measurement = 1;
@@ -373,14 +389,14 @@ static void idle_calibration(void)
 
 static void disk_calibration(void)
 {
-	pthread_t thr;
+	pt_thread_t thr = 0;
 
 	printf(_("Calibrating: disk usage \n"));
 
 	set_scsi_link("min_power");
 
 	stop_measurement = 0;
-	pthread_create(&thr, NULL, burn_disk, NULL);
+	pt_thread_create(&thr, burn_disk, NULL);
 
 	one_measurement(15, 15, NULL);
 	stop_measurement = 1;
@@ -396,15 +412,19 @@ void calibrate(void)
 	find_all_rfkill();
 	find_backlight();
 	find_scsi_link();
+#ifndef _WIN32
 	wireless_PS = get_wifi_power_saving("wlan0");
 
         save_sysfs("/sys/module/snd_hda_intel/parameters/power_save");
+#endif
 
 	cout << _("Starting PowerTOP power estimate calibration \n");
 	suspend_all_usb_devices();
 	rfkill_all_radios();
 	lower_backlight();
+#ifndef _WIN32
 	set_wifi_power_saving("wlan0", 1);
+#endif
 
 	sleep(4);
 
@@ -413,13 +433,17 @@ void calibrate(void)
 	disk_calibration();
 	backlight_calibration();
 
+#ifndef _WIN32
 	write_sysfs("/sys/module/snd_hda_intel/parameters/power_save", "1\n");
+#endif
 	cpu_calibration(1);
 	cpu_calibration(4);
 	wakeup_calibration(10000);
 	wakeup_calibration(100000);
 	wakeup_calibration(1000000);
+#ifndef _WIN32
 	set_wifi_power_saving("wlan0", 0);
+#endif
 	usb_calibration();
 	rfkill_calibration();
 

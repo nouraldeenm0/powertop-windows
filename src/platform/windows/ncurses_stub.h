@@ -18,7 +18,7 @@
 typedef int WINDOW;
 #define stdscr  ((WINDOW *)NULL)
 
-/* Colour constants */
+/* Colour/attribute constants */
 #define COLOR_BLACK   0
 #define COLOR_RED     1
 #define COLOR_GREEN   2
@@ -30,6 +30,19 @@ typedef int WINDOW;
 #define COLOR_PAIR(n) 0
 #define A_BOLD        0
 #define A_REVERSE     0
+#define A_NORMAL      0
+
+/* Screen size constants */
+#define LINES 25
+#define COLS  80
+
+/* Boolean */
+#ifndef TRUE
+#  define TRUE 1
+#endif
+#ifndef FALSE
+#  define FALSE 0
+#endif
 
 /* Key constants */
 #define KEY_UP    259
@@ -39,32 +52,50 @@ typedef int WINDOW;
 #define KEY_NPAGE 338
 #define KEY_PPAGE 339
 #define KEY_BTAB  353
-#define KEY_EXIT  0x1b
+#define KEY_EXIT  361    /* 0551 octal, same as real ncurses */
 #define ERR       (-1)
 #define OK        0
 
-/* Stubs */
-static inline int initscr(void)            { return 0; }
-static inline int endwin(void)             { return 0; }
-static inline int clear(void)              { return 0; }
-static inline int refresh(void)            { return 0; }
-static inline int noecho(void)             { return 0; }
-static inline int echo(void)               { return 0; }
-static inline int cbreak(void)             { return 0; }
-static inline int keypad(WINDOW *w, int e) { (void)w; (void)e; return 0; }
-static inline int start_color(void)        { return 0; }
-static inline int use_default_colors(void) { return 0; }
-static inline int attron(int a)            { (void)a; return 0; }
-static inline int attroff(int a)           { (void)a; return 0; }
-static inline int halfdelay(int t)         { (void)t; return 0; }
-static inline int getch(void)             { return ERR; }
-static inline int move(int y, int x)      { (void)y; (void)x; return 0; }
-static inline int clrtoeol(void)           { return 0; }
-static inline int clrtobot(void)           { return 0; }
-static inline int getmaxy(WINDOW *w)      { (void)w; return 25; }
-static inline int getmaxx(WINDOW *w)      { (void)w; return 80; }
+/* Core stubs */
+static inline WINDOW *initscr(void)           { return stdscr; }
+static inline int endwin(void)                { return 0; }
+static inline int clear(void)                 { return 0; }
+static inline int refresh(void)               { return 0; }
+static inline int noecho(void)                { return 0; }
+static inline int echo(void)                  { return 0; }
+static inline int cbreak(void)                { return 0; }
+static inline int nocbreak(void)              { return 0; }
+static inline int resetterm(void)             { return 0; }
+static inline int keypad(WINDOW *w, int e)    { (void)w; (void)e; return 0; }
+static inline int start_color(void)           { return 0; }
+static inline int use_default_colors(void)    { return 0; }
+static inline int attron(int a)               { (void)a; return 0; }
+static inline int attroff(int a)              { (void)a; return 0; }
+static inline int wattrset(WINDOW *w, int a)  { (void)w; (void)a; return 0; }
+static inline int halfdelay(int t)            { (void)t; return 0; }
+static inline int getch(void)                 { return ERR; }
+static inline int move(int y, int x)          { (void)y; (void)x; return 0; }
+static inline int clrtoeol(void)              { return 0; }
+static inline int clrtobot(void)              { return 0; }
+static inline int getmaxy(WINDOW *w)          { (void)w; return LINES; }
+static inline int getmaxx(WINDOW *w)          { (void)w; return COLS; }
 static inline int init_pair(int p, int f, int b) { (void)p;(void)f;(void)b; return 0; }
+static inline int delwin(WINDOW *w)           { (void)w; return 0; }
+static inline int wrefresh(WINDOW *w)         { (void)w; return 0; }
+static inline int wclear(WINDOW *w)           { (void)w; return 0; }
 
+/* Window creation */
+static inline WINDOW *newwin(int h, int w, int y, int x)
+{ (void)h; (void)w; (void)y; (void)x; return stdscr; }
+
+static inline WINDOW *newpad(int h, int w)
+{ (void)h; (void)w; return stdscr; }
+
+/* Refresh with scroll position */
+static inline int prefresh(WINDOW *p, int py, int px, int sy, int sx, int ey, int ex)
+{ (void)p; (void)py; (void)px; (void)sy; (void)sx; (void)ey; (void)ex; return 0; }
+
+/* Print functions */
 static inline int mvprintw(int y, int x, const char *fmt, ...)
 {
     (void)y; (void)x;
@@ -75,8 +106,28 @@ static inline int mvprintw(int y, int x, const char *fmt, ...)
     return 0;
 }
 
+static inline int mvwprintw(WINDOW *w, int y, int x, const char *fmt, ...)
+{
+    (void)w; (void)y; (void)x;
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    return 0;
+}
+
 static inline int printw(const char *fmt, ...)
 {
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    return 0;
+}
+
+static inline int wprintw(WINDOW *w, const char *fmt, ...)
+{
+    (void)w;
     va_list ap;
     va_start(ap, fmt);
     vprintf(fmt, ap);

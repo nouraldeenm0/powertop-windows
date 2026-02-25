@@ -25,7 +25,9 @@
 #include "display.h"
 #include "lib.h"
 
-#include <ncurses.h>
+#ifndef _WIN32
+#  include <ncurses.h>
+#endif
 
 
 #include <vector>

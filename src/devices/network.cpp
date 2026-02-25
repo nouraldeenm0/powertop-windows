@@ -29,30 +29,33 @@
 #include <map>
 
 #include <stdio.h>
-#include <sys/types.h>
-#include <libgen.h>
 #include <stdlib.h>
-#include <unistd.h>
-
-#include <linux/ethtool.h>
-
-using namespace std;
+#include <string.h>
+#include <limits.h>
 
 #include "device.h"
 #include "network.h"
 #include "../lib.h"
 #include "../parameters/parameters.h"
 #include "../process/process.h"
+
+#ifndef _WIN32
+#include <sys/types.h>
+#include <libgen.h>
+#include <unistd.h>
+#include <linux/ethtool.h>
 extern "C" {
 #include "../tuning/iw.h"
 }
-
-#include <string.h>
 #include <net/if.h>
 #include <linux/sockios.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#endif /* !_WIN32 */
 
+using namespace std;
+
+#ifndef _WIN32
 static map<string, class network *> nics;
 
 #ifdef DISABLE_TRYCATCH
@@ -439,3 +442,7 @@ double network::power_usage(struct result_bundle *result, struct parameter_bundl
 
 	return power;
 }
+
+#else /* _WIN32 */
+void create_all_nics(callback /*fn*/) { /* Not supported on Windows */ }
+#endif /* !_WIN32 */

@@ -39,29 +39,26 @@
 #include <stdarg.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <termios.h>
 #include <ctype.h>
-#include <getopt.h>
 #include <time.h>
-#include <signal.h>
-
-#include <sys/types.h>
-#include <sys/ioctl.h>
-
-#include <sys/stat.h>
 
 #include "measurement.h"
 #include "extech.h"
 #include "../lib.h"
+#include "../platform/platform.h"
 #include <iostream>
 #include <fstream>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 using namespace std;
+
+#ifndef _WIN32
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
 
 struct packet {
 	char	buf[256];
@@ -342,7 +339,7 @@ void extech_power_meter::start_measurement(void)
 	end_thread = 0;
 	sum = samples = 0;
 
-	if (pthread_create(&thread, NULL, thread_proc, this))
+	if (pt_thread_create(&thread, thread_proc, this))
 		fprintf(stderr, "ERROR: extech measurement thread creation failed\n");
 
 }
@@ -352,3 +349,6 @@ double extech_power_meter::power(void)
 {
 	return rate;
 }
+#else /* _WIN32 */
+void extech_power_meter(const char *) { /* Not supported on Windows */ }
+#endif /* !_WIN32 */
