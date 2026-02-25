@@ -33,13 +33,17 @@
 #include <stdio.h>
 #include <time.h>
 #include <sys/stat.h>
-#include <sys/statfs.h>
-#include <getopt.h>
-#include <unistd.h>
 #include <locale.h>
-#include <sys/resource.h>
 #include <limits.h>
-#include <pthread.h>
+
+#ifndef _WIN32
+#  include <sys/statfs.h>
+#  include <sys/resource.h>
+#  include <unistd.h>
+#  include <pthread.h>
+#endif
+
+#include "platform/platform.h"
 
 #include "cpu/cpu.h"
 #include "process/process.h"
@@ -64,10 +68,6 @@
 #include "display.h"
 #include "devlist.h"
 #include "report/report.h"
-
-#define DEBUGFS_MAGIC          0x64626720
-
-#define NR_OPEN_DEF 1024 * 1024
 
 int debug_learning = 0;
 unsigned time_out = 20;
@@ -227,9 +227,9 @@ void one_measurement(int seconds, int sample_interval, char *workload)
 	start_cpu_measurement();
 
 	if (workload && workload[0]) {
-		pthread_t thread = 0UL;
+		pt_thread_t thread = 0;
 		end_thread = false;
-		if (pthread_create(&thread, NULL, measure_background_thread, &sample_interval))
+		if (pt_thread_create(&thread, measure_background_thread, &sample_interval))
 			fprintf(stderr, "ERROR: workload measurement thread creation failed\n");
 
 		if (system(workload))
@@ -238,7 +238,7 @@ void one_measurement(int seconds, int sample_interval, char *workload)
 		if (thread)
 		{
 			end_thread = true;
-			pthread_join( thread, NULL);
+			pt_thread_join(thread);
 		}
 		global_sample_power();
 	} else {
@@ -326,10 +326,7 @@ void make_report(int time, char *workload, int iterations, int sample_interval, 
 }
 
 static void checkroot() {
-	int uid;
-	uid = geteuid();
-
-	if (uid != 0) {
+	if (!platform_is_privileged()) {
 		printf(_("PowerTOP " PACKAGE_VERSION " must be run with root privileges.\n"));
 		printf(_("exiting...\n"));
 		exit(EXIT_FAILURE);
@@ -337,65 +334,39 @@ static void checkroot() {
 
 }
 
-static int get_nr_open(void) {
-	int nr_open = NR_OPEN_DEF;
-	ifstream file;
-
-	file.open("/proc/sys/fs/nr_open", ios::in);
-	if (file) {
-		file >> nr_open;
-		file.close();
-	}
-	return nr_open;
-}
-
 static void powertop_init(int auto_tune)
 {
 	static char initialized = 0;
-	int ret;
-	struct statfs st_fs;
-	struct rlimit rlmt;
 
 	if (initialized)
 		return;
 
 	checkroot();
 
-	rlmt.rlim_cur = rlmt.rlim_max = get_nr_open();
-	setrlimit (RLIMIT_NOFILE, &rlmt);
+	platform_set_nr_open(platform_get_nr_open());
 
-	if (system("/sbin/modprobe cpufreq_stats > /dev/null 2>&1"))
-		fprintf(stderr, _("modprobe cpufreq_stats failed\n"));
-#if defined(__i386__) || defined(__x86_64__)
-	if (system("/sbin/modprobe msr > /dev/null 2>&1"))
-		fprintf(stderr, _("modprobe msr failed\n"));
-#endif
-	statfs("/sys/kernel/debug", &st_fs);
+#ifndef _WIN32
+	platform_modprobe("cpufreq_stats");
+#  if defined(__i386__) || defined(__x86_64__)
+	platform_modprobe("msr");
+#  endif
 
-	if (st_fs.f_type != (long) DEBUGFS_MAGIC) {
-		if (access("/bin/mount", X_OK) == 0) {
-			ret = system("/bin/mount -t debugfs debugfs /sys/kernel/debug > /dev/null 2>&1");
+	int ret = platform_mount_debugfs();
+	if (ret != 0) {
+		if (!auto_tune) {
+			fprintf(stderr, _("Failed to mount debugfs!\n"));
+			fprintf(stderr, _("exiting...\n"));
+			exit(EXIT_FAILURE);
 		} else {
-			ret = system("mount -t debugfs debugfs /sys/kernel/debug > /dev/null 2>&1");
-		}
-		if (ret != 0) {
-			if (!auto_tune) {
-				fprintf(stderr, _("Failed to mount debugfs!\n"));
-				fprintf(stderr, _("exiting...\n"));
-				exit(EXIT_FAILURE);
-			} else {
-				fprintf(stderr, _("Failed to mount debugfs!\n"));
-				fprintf(stderr, _("Should still be able to auto tune...\n"));
-			}
+			fprintf(stderr, _("Failed to mount debugfs!\n"));
+			fprintf(stderr, _("Should still be able to auto tune...\n"));
 		}
 	}
+#endif /* !_WIN32 */
 
 	srand(time(NULL));
 
-	if (access("/var/cache/", W_OK) == 0)
-		mkdir("/var/cache/powertop", 0600);
-	else
-		mkdir("/data/local/powertop", 0600);
+	platform_create_data_dir();
 
 	load_results("saved_results.powertop");
 	load_parameters("saved_parameters.powertop");
@@ -479,7 +450,11 @@ int main(int argc, char **argv)
 			break;
 		case OPT_EXTECH:	/* Extech power analyzer support */
 			checkroot();
+#ifndef _WIN32
 			extech_power_meter(optarg ? optarg : "/dev/ttyUSB0");
+#else
+			fprintf(stderr, _("Extech power meter not supported on Windows.\n"));
+#endif
 			break;
 		case 'r':		/* html report */
 			reporttype = REPORT_HTML;
@@ -494,7 +469,11 @@ int main(int argc, char **argv)
 			iterations = (optarg ? atoi(optarg) : 1);
 			break;
 		case 'q':
+#ifndef _WIN32
 			if (freopen("/dev/null", "a", stderr))
+#else
+			if (freopen("NUL", "a", stderr))
+#endif
 				fprintf(stderr, _("Quiet mode failed!\n"));
 			break;
 		case 's':

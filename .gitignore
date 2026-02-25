@@ -92,6 +92,15 @@ src/css.h
 *.o
 src/powertop
 
+# CMake build artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build/
+_build/
+*.cmake
+!cmake/config.h.cmake.in
+
 # development tools
 cscope.out
 tags
@@ -99,3 +108,7 @@ tags
 # doxygen
 doc/html
 Doxyfile.in.bak
+
+# backup files
+*~
+*.bak

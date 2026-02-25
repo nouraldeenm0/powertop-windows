@@ -37,6 +37,7 @@
 #include <limits.h>
 
 #include "lib.h"
+#include "platform/platform.h"
 
 #ifndef HAVE_NO_PCI
 extern "C" {
@@ -47,18 +48,21 @@ extern "C" {
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <dirent.h>
-#include <locale.h>
-#include <libintl.h>
+
+#ifndef _WIN32
+#  include <unistd.h>
+#  include <dirent.h>
+#  include <glob.h>
+#  include <fcntl.h>
+#  include <locale.h>
+#  include <libintl.h>
+#endif
+
 #include <limits>
 #include <math.h>
 #include <ncurses.h>
-#include <fcntl.h>
-#include <glob.h>
 
 static int kallsyms_read = 0;
 
@@ -115,6 +119,7 @@ map<unsigned long, string> kallsyms;
 
 static void read_kallsyms(void)
 {
+#ifndef _WIN32
 	ifstream file;
 	char line[1024];
 	kallsyms_read = 1;
@@ -142,6 +147,9 @@ static void read_kallsyms(void)
 			kallsyms[address] = c2;
 	}
 	file.close();
+#else
+	kallsyms_read = 1; /* no kernel symbols on Windows */
+#endif
 }
 
 const char *kernel_function(uint64_t address)
@@ -441,6 +449,7 @@ int equals(double a, double b)
 
 void process_directory(const char *d_name, callback fn)
 {
+#ifndef _WIN32
 	struct dirent *entry;
 	DIR *dir;
 	dir = opendir(d_name);
@@ -455,10 +464,12 @@ void process_directory(const char *d_name, callback fn)
 		fn(entry->d_name);
 	}
 	closedir(dir);
+#endif /* _WIN32 handled in dir_win.cpp */
 }
 
 void process_glob(const char *d_glob, callback fn)
 {
+#ifndef _WIN32
 	glob_t g;
 	size_t c;
 
@@ -481,6 +492,7 @@ void process_glob(const char *d_glob, callback fn)
 		fn(g.gl_pathv[c]);
 	}
 	globfree(&g);
+#endif /* _WIN32 handled in dir_win.cpp */
 }
 
 int get_user_input(char *buf, unsigned sz)
@@ -497,74 +509,12 @@ int get_user_input(char *buf, unsigned sz)
 
 int read_msr(int cpu, uint64_t offset, uint64_t *value)
 {
-#if defined(__i386__) || defined(__x86_64__)
-	ssize_t retval;
-	uint64_t msr;
-	int fd;
-	char msr_path[256];
-
-	snprintf(msr_path, sizeof(msr_path), "/dev/cpu/%d/msr", cpu);
-
-	if (access(msr_path, R_OK) != 0){
-		snprintf(msr_path, sizeof(msr_path), "/dev/msr%d", cpu);
-
-		if (access(msr_path, R_OK) != 0){
-			fprintf(stderr,
-			 _("Model-specific registers (MSR)\
-			 not found (try enabling CONFIG_X86_MSR).\n"));
-			return -1;
-		}
-	}
-
-	fd = open(msr_path, O_RDONLY);
-	if (fd < 0)
-		return -1;
-	retval = pread(fd, &msr, sizeof msr, offset);
-	close(fd);
-	if (retval != sizeof msr) {
-		return -1;
-	}
-	*value = msr;
-
-	return retval;
-#else
-	return -1;
-#endif
+	return platform_read_msr(cpu, offset, value);
 }
 
 int write_msr(int cpu, uint64_t offset, uint64_t value)
 {
-#if defined(__i386__) || defined(__x86_64__)
-	ssize_t retval;
-	int fd;
-	char msr_path[256];
-
-	snprintf(msr_path, sizeof(msr_path), "/dev/cpu/%d/msr", cpu);
-
-	if (access(msr_path, R_OK) != 0){
-		snprintf(msr_path, sizeof(msr_path), "/dev/msr%d", cpu);
-
-		if (access(msr_path, R_OK) != 0){
-			fprintf(stderr,
-			 _("Model-specific registers (MSR)\
-			 not found (try enabling CONFIG_X86_MSR).\n"));
-			return -1;
-		}
-	}
-
-	fd = open(msr_path, O_WRONLY);
-	if (fd < 0)
-		return -1;
-	retval = pwrite(fd, &value, sizeof value, offset);
-	close(fd);
-	if (retval != sizeof value) {
-		return -1;
-	}
-
-	return retval;
-#else
-	return -1;
-#endif
+	return platform_write_msr(cpu, offset, value);
 }
 
 #define UI_NOTIFY_BUFF_SZ 2048

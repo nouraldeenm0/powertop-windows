@@ -14,6 +14,9 @@ powertop_SOURCES = \
 	main.cpp \
 	powertop.css \
 	\
+	platform/platform.h \
+	platform/platform_linux.cpp \
+	\
 	calibrate/calibrate.cpp \
 	calibrate/calibrate.h \
 	cpu/abstract_cpu.cpp \

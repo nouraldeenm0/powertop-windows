@@ -1,46 +1,79 @@
-﻿# PowerTOP
+﻿# PowerTOP (Windows-compatible Fork)
 
-PowerTOP is a Linux* tool used to diagnose issues with power consumption and
-power management. In addition to being a diagnostic tool, PowerTOP also has an
-interactive mode you can use to experiment with various power management
-settings, for cases where the Linux distribution has not enabled those
-settings.
+PowerTOP is a tool used to diagnose issues with power consumption and
+power management. This is a fork that adds Windows compatibility alongside
+the original Linux support.
+
+On Linux, PowerTOP provides full functionality including interactive mode,
+C/P-state monitoring, device power management, and process power attribution.
+
+On Windows, PowerTOP provides battery status, AC/DC detection, and basic
+power information via Windows APIs. Linux-specific features (perf events,
+tracefs, sysfs) are gracefully disabled.
 
 
 # Build dependencies
 
-PowerTOP is coded in C++. It was written for Linux-based operating systems.
-GNU* libc (`glibc`) and Linux `pthreads` are needed for PowerTOP to function
-properly. The GNU build system (`autoconf`, `automake`, `make`, `libtool`), as
-well as `gettext`, are required to build PowerTOP.
+PowerTOP is coded in C++11. It supports two build systems:
 
-In addition, PowerTOP requires the following:
+* **Autotools** (Linux only — original build system)
+* **CMake** (Linux and Windows — cross-platform build system)
 
-* kernel version => 2.6.38
+## Linux build dependencies
+
+* kernel version >= 2.6.38
 * `ncurses-devel` (required)
 * `libnl-devel` (required)
-* `pciutils-devel` (is only required if you have PCI)
-* `autoconf-archive` (for building)
+* `libtracefs-devel` (required)
+* `pciutils-devel` (optional — PCI device info)
+* `autoconf-archive` (for autotools builds)
 
-Example packages to install in Ubuntu*:
+Example packages to install in Ubuntu:
 
     sudo apt install libpci-dev libnl-3-dev libnl-genl-3-dev gettext \
     libgettextpo-dev autopoint gettext libncurses5-dev libncursesw5-dev libtool-bin \
-    dh-autoreconf autoconf-archive pkg-config
+    dh-autoreconf autoconf-archive pkg-config libtracefs-dev
 
 
-## Building PowerTOP
+## Windows build dependencies
+
+* CMake >= 3.14
+* MinGW-w64 (for cross-compilation from Linux) or MSVC (native Windows)
+* PDCurses (optional — for the interactive ncurses UI)
+
+Cross-compile on Linux targeting Windows:
+
+    sudo apt install mingw-w64 cmake
+
+## Building PowerTOP (Linux — autotools)
 
 The `autogen.sh` script needs to be run only once to generate `configure`.
-You need to re-run it only if the build system configuration files
-(e.g. `configure.ac`) are modified. The remaining steps are required whenever
-source files are modified.
-
-To build PowerTOP from the cloned source, use the following commands:
 
     ./autogen.sh
     ./configure
     make
+
+## Building PowerTOP (Linux — CMake)
+
+    mkdir build && cd build
+    cmake ..
+    make
+
+## Building PowerTOP (Windows — MinGW-w64 cross-compilation)
+
+Cross-compile from Linux for Windows:
+
+    mkdir build-win && cd build-win
+    cmake .. \
+        -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-mingw64.cmake \
+        -DCMAKE_BUILD_TYPE=Release
+    make
+
+Or natively on Windows with MSVC/CMake:
+
+    mkdir build && cd build
+    cmake .. -G "Visual Studio 17 2022"
+    cmake --build . --config Release
 
 
 # Running PowerTOP
@@ -49,8 +82,26 @@ The following sections go over basic operation of PowerTOP. This includes
 kernel configuration options (or kernel patches) needed for full functionality.
 Run `powertop --help` to see all options.
 
+PowerTOP must be run with administrator/root privileges.
 
-## Kernel parameters and (optional) patches
+## Windows notes
+
+On Windows, PowerTOP uses the `GetSystemPowerStatus` API for battery and AC
+status information. MSR (Model-Specific Register) access requires a kernel
+driver such as [WinRing0](https://openlibsys.org/); without it, C-state
+data will not be available.
+
+The interactive ncurses UI requires [PDCurses](https://pdcurses.org/) to be
+installed. Without it, PowerTOP runs in report-only mode.
+
+Windows-specific limitations:
+- No perf-events or tracefs support (Linux kernel feature)
+- No sysfs/procfs device enumeration  
+- MSR reads require a privileged kernel driver
+- Extech power meter (`--extech`) not supported
+
+
+## Kernel parameters (Linux only)
 
 PowerTOP needs some kernel config options enabled to function
 properly. As of linux-3.3.0, these are (the list probably is incomplete):
@@ -107,16 +158,10 @@ If you wish to file a functional bug report, generate and share a
 
     powertop --debug --html=report.html
 
-**Important Note:** As PowerTOP is intended for privileged (`root`) use, your
-reports-- especially when run with `--debug`-- will contain verbose system
-information. PowerTOP **does not** sanitize, scrub, or otherwise anonymize its
-reports. Be mindful of this when sharing reports.
-
-**Developers:** If you make changes to the HTML reporting code, validate HTML
-output by using the W3C* Markup Validation Service and the W3C CSS Validation
-Service:
-* http://validator.w3.org/#validate_by_upload
-* http://jigsaw.w3.org/css-validator/#validate_by_upload
+**Important Note:** As PowerTOP is intended for privileged (`root`/Administrator)
+use, your reports-- especially when run with `--debug`-- will contain verbose
+system information. PowerTOP **does not** sanitize, scrub, or otherwise
+anonymize its reports. Be mindful of this when sharing reports.
 
 
 ## Calibrating and power numbers
@@ -128,11 +173,8 @@ accuracy of the estimation by running a calibration cycle at least once:
 
     powertop --calibrate
 
-*Calibration* entails cycling through various display brightness levels
-(including "off"), USB device activities, and other workloads.
 
-
-## Extech Power Analyzer / Datalogger support
+## Extech Power Analyzer / Datalogger support (Linux only)
 
 Our analysis teams use the Extech* Power Analyzer/Datalogger (model
 number 380803). PowerTOP supports this device over the serial cable by passing
