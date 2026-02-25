@@ -98,8 +98,9 @@ CMakeFiles/
 cmake_install.cmake
 build/
 _build/
-*.cmake
-!cmake/config.h.cmake.in
+# Ignore generated cmake files but not source cmake files
+/CMakeFiles
+/cmake_install.cmake
 
 # development tools
 cscope.out
