@@ -25,7 +25,9 @@
 #ifndef INCLUDE_GUARD_LIB_H
 #define INCLUDE_GUARD_LIB_H
 
-#include <libintl.h>
+#ifndef _WIN32
+#  include <libintl.h>
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <cstring>
@@ -36,7 +38,11 @@
 #endif
 
 #ifdef ENABLE_NLS
-#define _(STRING)    gettext(STRING)
+#  ifndef _WIN32
+#    define _(STRING)    gettext(STRING)
+#  else
+#    define _(STRING)    (STRING)
+#  endif
 #else
 #define _(STRING)    (STRING)
 #endif

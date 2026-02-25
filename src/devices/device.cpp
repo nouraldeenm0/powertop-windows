@@ -79,8 +79,13 @@ void device::register_sysfs_path(const char *path)
 			break;
 	}
 
+#ifndef _WIN32
 	if (!realpath(current_path, real_path))
 		real_path[0] = 0;
+#else
+	strncpy(real_path, current_path, sizeof(real_path) - 1);
+	real_path[sizeof(real_path) - 1] = '\0';
+#endif
 }
 
 void device::start_measurement(void)

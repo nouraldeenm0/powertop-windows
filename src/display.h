@@ -28,7 +28,12 @@
 
 #include <map>
 #include <string>
-#include <ncurses.h>
+
+#ifdef _WIN32
+#  include "platform/windows/ncurses_stub.h"
+#else
+#  include <ncurses.h>
+#endif
 
 using namespace std;
 

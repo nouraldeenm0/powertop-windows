@@ -43,7 +43,9 @@ using namespace std;
 extern "C" {
 #include <string.h>
 #include <unistd.h>
+#ifndef _WIN32
 #include <tracefs.h>
+#endif
 }
 
 i915gpu::i915gpu(): device()
@@ -80,11 +82,15 @@ void create_i915_gpu(void)
 	class i915gpu *gpu;
 	gpu_rapl_device *rapl_dev;
 
+#ifndef _WIN32
 	if (!tracefs_event_file_exists(NULL, "i915", "i915_gem_ring_dispatch", "format")) {
 		/* try an older tracepoint */
 		if (!tracefs_event_file_exists(NULL, "i915", "i915_gem_request_submit", "format"))
 			return;
 	}
+#else
+	return; /* i915 tracing not available on Windows */
+#endif
 
 	register_parameter("gpu-operations");
 

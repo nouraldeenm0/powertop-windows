@@ -33,12 +33,15 @@
 #include <sys/stat.h>
 #include <vector>
 #include <algorithm>
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
+
+#ifndef _WIN32
+#  include <unistd.h>
+#  include <sys/types.h>
+#  include <dirent.h>
+#endif
 
 using namespace std;
 
@@ -92,6 +95,7 @@ void clean_open_devices()
 
 void collect_open_devices(void)
 {
+#ifndef _WIN32
 	struct dirent *entry;
 	DIR *dir;
 	char filename[PATH_MAX];
@@ -182,6 +186,7 @@ void collect_open_devices(void)
 		phase = 0;
 	else
 		phase = 1;
+#endif /* !_WIN32 */
 }
 
 

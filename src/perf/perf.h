@@ -27,14 +27,15 @@
 
 #include <iostream>
 
-
+#ifndef _WIN32
 extern "C" {
 	#include <tracefs.h>
 }
-
+#endif
 
 using namespace std;
 
+#ifndef _WIN32
 class  perf_event {
 protected:
 	int perf_fd;
@@ -72,5 +73,22 @@ public:
 	static struct tep_handle *tep;
 
 };
+#else /* _WIN32 */
+/* Perf events are not available on Windows - provide an empty stub */
+class perf_event {
+public:
+	unsigned int trace_type;
+	perf_event(void) : trace_type(0) {}
+	perf_event(const char *, const char *, int = 0, int = 128) : trace_type(0) {}
+	virtual ~perf_event(void) {}
+	void set_event_name(const char *, const char *) {}
+	void set_cpu(int) {}
+	void start(void) {}
+	void stop(void) {}
+	void clear(void) {}
+	void process(void *) {}
+	virtual void handle_event(void *, void *) {}
+};
+#endif /* _WIN32 */
 
 #endif

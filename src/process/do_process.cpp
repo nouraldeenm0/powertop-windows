@@ -39,10 +39,14 @@
 
 #include <stdio.h>
 #include <string.h>
+#ifndef _WIN32
 #include <ncurses.h>
+#endif
 
 #include "../perf/perf_bundle.h"
+#ifndef _WIN32
 #include "../perf/perf_event.h"
+#endif
 #include "../parameters/parameters.h"
 #include "../display.h"
 #include "../measurement/measurement.h"
@@ -167,10 +171,12 @@ static void consume_blame(unsigned int cpu)
 }
 
 
+#ifndef _WIN32
 class perf_process_bundle: public perf_bundle
 {
 	virtual void handle_trace_point(void *trace, int cpu, uint64_t time);
 };
+#endif /* !_WIN32 */
 
 static bool comm_is_xorg(char *comm)
 {
@@ -187,6 +193,8 @@ int dont_blame_me(char *comm)
 
 	return 0;
 }
+
+#ifndef _WIN32 /* Linux-only: perf/tep process tracking functions */
 
 static char * get_tep_field_str(void *trace, struct tep_event *event, struct tep_format_field *field)
 {
@@ -652,8 +660,11 @@ void perf_process_bundle::handle_trace_point(void *trace, int cpu, uint64_t time
 	}
 }
 
+#endif /* !_WIN32 */
+
 void start_process_measurement(void)
 {
+#ifndef _WIN32
 	if (!perf_events) {
 		perf_events = new perf_process_bundle();
 		perf_events->add_event("sched","sched_switch");
@@ -680,14 +691,16 @@ void start_process_measurement(void)
 	first_stamp = ~0ULL;
 	last_stamp = 0;
 	perf_events->start();
+#endif /* !_WIN32 */
 }
 
 void end_process_measurement(void)
 {
 	if (!perf_events)
 		return;
-
+#ifndef _WIN32
 	perf_events->stop();
+#endif
 }
 
 
@@ -1166,8 +1179,10 @@ void process_process_data(void)
 
 
 	/* process data */
+#ifndef _WIN32
 	perf_events->process();
 	perf_events->clear();
+#endif
 
 	run_devpower_list();
 
@@ -1217,14 +1232,18 @@ void end_process_data(void)
 	clear_work();
 	clear_consumers();
 
+#ifndef _WIN32
 	perf_events->clear();
+#endif
 
 }
 
 void clear_process_data(void)
 {
+#ifndef _WIN32
 	if (perf_events)
 		perf_events->release();
 	delete perf_events;
+#endif
 }
 
