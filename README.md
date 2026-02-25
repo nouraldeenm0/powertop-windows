@@ -45,6 +45,28 @@ Cross-compile on Linux targeting Windows:
 
     sudo apt install mingw-w64 cmake
 
+## Installing PowerTOP on Windows (automated)
+
+The easiest way to build and install PowerTOP on a native Windows machine is
+to use the provided PowerShell installer script.  It checks for all required
+and optional dependencies, asks your permission before installing anything,
+builds PowerTOP, and optionally puts the binary on your `PATH`.
+
+Open an **Administrator** PowerShell window and run:
+
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    .\scripts\install.ps1
+
+The script will:
+1. Detect missing dependencies (CMake, a C++ compiler, Git, optional PDCurses).
+2. Offer to install each missing dependency via **winget** (preferred) or
+   **Chocolatey** (fallback) — always asking first.
+3. Configure and build PowerTOP with CMake.
+4. Optionally copy `powertop.exe` to a directory of your choice and add it to
+   the system `PATH`.
+
+> **Note:** PowerTOP itself must always be run as Administrator.
+
 ## Building PowerTOP (Linux — autotools)
 
 The `autogen.sh` script needs to be run only once to generate `configure`.
